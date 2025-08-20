@@ -1,0 +1,118 @@
+--// FPS + Ping Counter (Auto Resize + Color Border by Ping)
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Stats = game:GetService("Stats")
+
+-- ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "StatsCounter"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Frame gọn tự co giãn
+local Frame = Instance.new("Frame")
+Frame.Position = UDim2.new(1, -150, 0, 10) -- góc phải trên
+Frame.BackgroundTransparency = 0.4
+Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame.BorderSizePixel = 2
+Frame.BorderColor3 = Color3.fromRGB(0, 255, 0) -- mặc định xanh
+Frame.AutomaticSize = Enum.AutomaticSize.XY
+Frame.Size = UDim2.new(0, 0, 0, 0)
+Frame.Parent = ScreenGui
+
+-- Bo góc
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 6)
+UICorner.Parent = Frame
+
+-- Layout dọc
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = Frame
+UIListLayout.FillDirection = Enum.FillDirection.Vertical
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 2)
+
+-- Padding
+local UIPadding = Instance.new("UIPadding")
+UIPadding.Parent = Frame
+UIPadding.PaddingLeft = UDim.new(0, 6)
+UIPadding.PaddingRight = UDim.new(0, 6)
+UIPadding.PaddingTop = UDim.new(0, 4)
+UIPadding.PaddingBottom = UDim.new(0, 4)
+
+-- FPS Label
+local FPSLabel = Instance.new("TextLabel")
+FPSLabel.BackgroundTransparency = 1
+FPSLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+FPSLabel.Font = Enum.Font.Code
+FPSLabel.TextSize = 14
+FPSLabel.Text = "FPS: 0 / 1000"
+FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
+FPSLabel.AutomaticSize = Enum.AutomaticSize.XY
+FPSLabel.Size = UDim2.new(0, 0, 0, 0)
+FPSLabel.Parent = Frame
+
+-- Ping Label
+local PingLabel = Instance.new("TextLabel")
+PingLabel.BackgroundTransparency = 1
+PingLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+PingLabel.Font = Enum.Font.Code
+PingLabel.TextSize = 14
+PingLabel.Text = "Ping: 0 ms"
+PingLabel.TextXAlignment = Enum.TextXAlignment.Left
+PingLabel.AutomaticSize = Enum.AutomaticSize.XY
+PingLabel.Size = UDim2.new(0, 0, 0, 0)
+PingLabel.Parent = Frame
+
+-- Biến tính FPS
+local lastTime = tick()
+local frames = 0
+local MaxFPS = 1000
+
+-- Hàm đổi màu
+local function setColor(label, value, isFPS)
+	if isFPS then
+		-- FPS: thấp = đỏ, trung bình = vàng, cao = xanh
+		if value < 30 then
+			label.TextColor3 = Color3.fromRGB(255, 0, 0) -- đỏ
+		elseif value < 60 then
+			label.TextColor3 = Color3.fromRGB(255, 255, 0) -- vàng
+		else
+			label.TextColor3 = Color3.fromRGB(0, 255, 0) -- xanh
+		end
+	else
+		-- Ping: <=100 = xanh, 101–199 = vàng, >=200 = đỏ
+		if value <= 100 then
+			label.TextColor3 = Color3.fromRGB(0, 255, 0)
+			Frame.BorderColor3 = Color3.fromRGB(0, 255, 0)
+		elseif value < 200 then
+			label.TextColor3 = Color3.fromRGB(255, 255, 0)
+			Frame.BorderColor3 = Color3.fromRGB(255, 255, 0)
+		else
+			label.TextColor3 = Color3.fromRGB(255, 0, 0)
+			Frame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+		end
+	end
+end
+
+-- Cập nhật FPS & Ping
+RunService.RenderStepped:Connect(function()
+	frames = frames + 1
+	local now = tick()
+
+	if now - lastTime >= 1 then
+		local fps = math.floor(frames / (now - lastTime))
+		if fps > MaxFPS then fps = MaxFPS end
+		FPSLabel.Text = "FPS: " .. fps .. " / " .. MaxFPS
+		setColor(FPSLabel, fps, true)
+		frames = 0
+		lastTime = now
+	end
+
+	local pingStat = Stats.Network.ServerStatsItem["Data Ping"]
+	if pingStat then
+		local ping = math.floor(pingStat:GetValue())
+		PingLabel.Text = "Ping: " .. ping .. " ms"
+		setColor(PingLabel, ping, false)
+	end
+end)
