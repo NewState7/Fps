@@ -116,3 +116,4 @@ RunService.RenderStepped:Connect(function()
 		setColor(PingLabel, ping, false)
 	end
 end)
+print("Enel⚡️")
