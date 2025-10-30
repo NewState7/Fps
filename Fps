@@ -123,12 +123,12 @@ local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 
 local label = Instance.new("TextLabel")
 label.Parent = screenGui
-label.Size = UDim2.new(0, 300, 0, 60)
+label.Size = UDim2.new(0, 200, 0, 50)
 label.Position = UDim2.new(0.5, -150, 0.2, 0)
 label.AnchorPoint = Vector2.new(0.5, 0)
-label.Text = "Chữ dùng Mini Crafts"
-label.TextSize = 32
-label.BackgroundTransparency = 1
+label.Text = "Enel"
+label.TextSize = 20
+label.BackgroundTransparency = 2
 
 -- Nếu bạn có family JSON hoặc đường dẫn rbxasset://fonts/families/...
 -- (thay "MiniCrafts.json" bằng tên file/family thực tế hoặc đường dẫn hợp lệ)
