@@ -1,119 +1,221 @@
---// FPS + Ping Counter (Auto Resize + Color Border by Ping)
+--// SERVICES
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Stats = game:GetService("Stats")
+local UIS = game:GetService("UserInputService")
 
--- ScreenGui
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "StatsCounter"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+local player = Players.LocalPlayer
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.ResetOnSpawn = false
 
--- Frame gọn tự co giãn
-local Frame = Instance.new("Frame")
-Frame.Position = UDim2.new(1, -150, 0, 10) -- góc phải trên
-Frame.BackgroundTransparency = 0.4
-Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Frame.BorderSizePixel = 2
-Frame.BorderColor3 = Color3.fromRGB(0, 255, 0) -- mặc định xanh
-Frame.AutomaticSize = Enum.AutomaticSize.XY
-Frame.Size = UDim2.new(0, 0, 0, 0)
-Frame.Parent = ScreenGui
+-------------------------------------------------
+-- DRAG SYSTEM (FIX CLICK WHEN DRAG)
+-------------------------------------------------
+local function dragify(Frame)
+    local dragging=false
+    local dragStart
+    local startPos
+    local moved=false
 
--- Bo góc
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 6)
-UICorner.Parent = Frame
+    Frame.InputBegan:Connect(function(input)
+        if input.UserInputType==Enum.UserInputType.MouseButton1
+        or input.UserInputType==Enum.UserInputType.Touch then
+            dragging=true
+            moved=false
+            dragStart=input.Position
+            startPos=Frame.Position
 
--- Layout dọc
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Parent = Frame
-UIListLayout.FillDirection = Enum.FillDirection.Vertical
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 2)
+            input.Changed:Connect(function()
+                if input.UserInputState==Enum.UserInputState.End then
+                    dragging=false
+                end
+            end)
+        end
+    end)
 
--- Padding
-local UIPadding = Instance.new("UIPadding")
-UIPadding.Parent = Frame
-UIPadding.PaddingLeft = UDim.new(0, 6)
-UIPadding.PaddingRight = UDim.new(0, 6)
-UIPadding.PaddingTop = UDim.new(0, 4)
-UIPadding.PaddingBottom = UDim.new(0, 4)
+    UIS.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType==Enum.UserInputType.MouseMovement
+        or input.UserInputType==Enum.UserInputType.Touch) then
 
--- FPS Label
-local FPSLabel = Instance.new("TextLabel")
-FPSLabel.BackgroundTransparency = 1
-FPSLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-FPSLabel.Font = Enum.Font.Code
-FPSLabel.TextSize = 14
-FPSLabel.Text = "FPS: 0 / 1000"
-FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
-FPSLabel.AutomaticSize = Enum.AutomaticSize.XY
-FPSLabel.Size = UDim2.new(0, 0, 0, 0)
-FPSLabel.Parent = Frame
+            local delta=input.Position-dragStart
 
--- Ping Label
-local PingLabel = Instance.new("TextLabel")
-PingLabel.BackgroundTransparency = 1
-PingLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-PingLabel.Font = Enum.Font.Code
-PingLabel.TextSize = 14
-PingLabel.Text = "Ping: 0 ms"
-PingLabel.TextXAlignment = Enum.TextXAlignment.Left
-PingLabel.AutomaticSize = Enum.AutomaticSize.XY
-PingLabel.Size = UDim2.new(0, 0, 0, 0)
-PingLabel.Parent = Frame
+            if math.abs(delta.X)>6 or math.abs(delta.Y)>6 then
+                moved=true
+            end
 
--- Biến tính FPS
-local lastTime = tick()
-local frames = 0
-local MaxFPS = 1000
+            Frame.Position=UDim2.new(
+                startPos.X.Scale,startPos.X.Offset+delta.X,
+                startPos.Y.Scale,startPos.Y.Offset+delta.Y)
+        end
+    end)
 
--- Hàm đổi màu
-local function setColor(label, value, isFPS)
-	if isFPS then
-		-- FPS: thấp = đỏ, trung bình = vàng, cao = xanh
-		if value < 30 then
-			label.TextColor3 = Color3.fromRGB(255, 0, 0) -- đỏ
-		elseif value < 60 then
-			label.TextColor3 = Color3.fromRGB(255, 255, 0) -- vàng
-		else
-			label.TextColor3 = Color3.fromRGB(0, 255, 0) -- xanh
-		end
-	else
-		-- Ping: <=100 = xanh, 101–199 = vàng, >=200 = đỏ
-		if value <= 100 then
-			label.TextColor3 = Color3.fromRGB(0, 255, 0)
-			Frame.BorderColor3 = Color3.fromRGB(0, 255, 0)
-		elseif value < 200 then
-			label.TextColor3 = Color3.fromRGB(255, 255, 0)
-			Frame.BorderColor3 = Color3.fromRGB(255, 255, 0)
-		else
-			label.TextColor3 = Color3.fromRGB(255, 0, 0)
-			Frame.BorderColor3 = Color3.fromRGB(255, 0, 0)
-		end
-	end
+    return function() return moved end
 end
 
--- Cập nhật FPS & Ping
-RunService.RenderStepped:Connect(function()
-	frames = frames + 1
-	local now = tick()
+-------------------------------------------------
+-- FPS FRAME (MỜ + AUTO SIZE)
+-------------------------------------------------
+local frame=Instance.new("Frame",gui)
+frame.Position=UDim2.new(1,-150,0,10)
+frame.BackgroundColor3=Color3.fromRGB(0,0,0)
+frame.BackgroundTransparency=0.55
+frame.BorderSizePixel=2
+frame.AutomaticSize=Enum.AutomaticSize.XY
+dragify(frame)
 
-	if now - lastTime >= 1 then
-		local fps = math.floor(frames / (now - lastTime))
-		if fps > MaxFPS then fps = MaxFPS end
-		FPSLabel.Text = "FPS: " .. fps .. " / " .. MaxFPS
-		setColor(FPSLabel, fps, true)
-		frames = 0
-		lastTime = now
-	end
+local padding=Instance.new("UIPadding",frame)
+padding.PaddingLeft=UDim.new(0,6)
+padding.PaddingRight=UDim.new(0,6)
+padding.PaddingTop=UDim.new(0,4)
+padding.PaddingBottom=UDim.new(0,4)
 
-	local pingStat = Stats.Network.ServerStatsItem["Data Ping"]
-	if pingStat then
-		local ping = math.floor(pingStat:GetValue())
-		PingLabel.Text = "Ping: " .. ping .. " ms"
-		setColor(PingLabel, ping, false)
-	end
+local list=Instance.new("UIListLayout",frame)
+list.Padding=UDim.new(0,2)
+
+local fpsLabel=Instance.new("TextLabel",frame)
+fpsLabel.BackgroundTransparency=1
+fpsLabel.Font=Enum.Font.Code
+fpsLabel.TextSize=14
+fpsLabel.TextXAlignment=Enum.TextXAlignment.Left
+fpsLabel.AutomaticSize=Enum.AutomaticSize.XY
+fpsLabel.Text="FPS: 0 / 500"
+
+local pingLabel=Instance.new("TextLabel",frame)
+pingLabel.BackgroundTransparency=1
+pingLabel.Font=Enum.Font.Code
+pingLabel.TextSize=14
+pingLabel.TextXAlignment=Enum.TextXAlignment.Left
+pingLabel.AutomaticSize=Enum.AutomaticSize.XY
+pingLabel.Text="Ping: 0 ms"
+pingLabel.TextColor3=Color3.fromRGB(0,255,0)
+
+-------------------------------------------------
+-- BUTTON DELETE MAP
+-------------------------------------------------
+local btn=Instance.new("TextButton",gui)
+btn.Size=UDim2.new(0,140,0,40)
+btn.Position=UDim2.new(0,10,0.75,0)
+btn.BackgroundColor3=Color3.fromRGB(20,20,20)
+btn.TextColor3=Color3.fromRGB(255,255,255)
+btn.Font=Enum.Font.Code
+btn.TextSize=15
+btn.Text="DELETE 80% MAP"
+local wasDragged=dragify(btn)
+
+-------------------------------------------------
+-- CONFIRM UI
+-------------------------------------------------
+local confirmFrame=Instance.new("Frame",gui)
+confirmFrame.Size=UDim2.new(0,220,0,110)
+confirmFrame.Position=UDim2.new(0.5,-110,0.5,-55)
+confirmFrame.BackgroundColor3=Color3.fromRGB(0,0,0)
+confirmFrame.BackgroundTransparency=0.25
+confirmFrame.Visible=false
+confirmFrame.BorderSizePixel=2
+
+local title=Instance.new("TextLabel",confirmFrame)
+title.Size=UDim2.new(1,0,0.5,0)
+title.BackgroundTransparency=1
+title.Font=Enum.Font.Code
+title.TextSize=18
+title.TextColor3=Color3.fromRGB(255,255,255)
+title.Text="DELETE 80% MAP ?"
+
+local yesBtn=Instance.new("TextButton",confirmFrame)
+yesBtn.Size=UDim2.new(0.5,0,0.5,0)
+yesBtn.Position=UDim2.new(0,0,0.5,0)
+yesBtn.Text="YES"
+yesBtn.Font=Enum.Font.Code
+yesBtn.TextSize=16
+yesBtn.BackgroundColor3=Color3.fromRGB(0,170,0)
+yesBtn.TextColor3=Color3.fromRGB(255,255,255)
+
+local noBtn=Instance.new("TextButton",confirmFrame)
+noBtn.Size=UDim2.new(0.5,0,0.5,0)
+noBtn.Position=UDim2.new(0.5,0,0.5,0)
+noBtn.Text="NO"
+noBtn.Font=Enum.Font.Code
+noBtn.TextSize=16
+noBtn.BackgroundColor3=Color3.fromRGB(170,0,0)
+noBtn.TextColor3=Color3.fromRGB(255,255,255)
+
+-------------------------------------------------
+-- DELETE 80% MAP FUNCTION
+-------------------------------------------------
+local function delete80Map()
+    local objects={}
+    for _,obj in pairs(workspace:GetDescendants()) do
+        if (obj:IsA("BasePart") or obj:IsA("Model"))
+        and not obj:IsDescendantOf(game.Players)
+        and obj.Name~="Terrain"
+        and obj.Name~="Camera" then
+            table.insert(objects,obj)
+        end
+    end
+
+    local total=#objects
+    local deleteCount=math.floor(total*0.8)
+
+    for i=total,2,-1 do
+        local j=math.random(i)
+        objects[i],objects[j]=objects[j],objects[i]
+    end
+
+    for i=1,deleteCount do
+        if objects[i] and objects[i].Parent then
+            objects[i]:Destroy()
+        end
+    end
+
+    btn.Text="DONE ✔"
+end
+
+-------------------------------------------------
+-- BUTTON EVENTS
+-------------------------------------------------
+btn.MouseButton1Click:Connect(function()
+    if wasDragged() then return end
+    confirmFrame.Visible=true
 end)
-print("Enel⚡️")
+
+yesBtn.MouseButton1Click:Connect(function()
+    confirmFrame.Visible=false
+    delete80Map()
+end)
+
+noBtn.MouseButton1Click:Connect(function()
+    confirmFrame.Visible=false
+end)
+
+-------------------------------------------------
+-- FPS + PING COUNTER
+-------------------------------------------------
+local frames=0
+local last=tick()
+local MAX_FPS=500
+
+RunService.RenderStepped:Connect(function()
+    frames+=1
+    local now=tick()
+
+    if now-last>=1 then
+        local fps=math.floor(frames/(now-last))
+        if fps>MAX_FPS then fps=MAX_FPS end
+        fpsLabel.Text="FPS: "..fps.." / "..MAX_FPS
+
+        if fps<30 then
+            fpsLabel.TextColor3=Color3.fromRGB(255,0,0)
+        else
+            fpsLabel.TextColor3=Color3.fromRGB(0,255,0)
+        end
+
+        frames=0
+        last=now
+    end
+
+    local pingStat=Stats.Network.ServerStatsItem["Data Ping"]
+    if pingStat then
+        pingLabel.Text="Ping: "..math.floor(pingStat:GetValue()).." ms"
+    end
+end)
+printf("By.Enel")
