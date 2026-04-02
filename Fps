@@ -1,221 +1,162 @@
 --// SERVICES
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Stats = game:GetService("Stats")
-local UIS = game:GetService("UserInputService")
-
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+
+--====================================================
+-- GUI FPS + PING (MỜ + DRAG)
+--====================================================
+local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
 
--------------------------------------------------
--- DRAG SYSTEM (FIX CLICK WHEN DRAG)
--------------------------------------------------
-local function dragify(Frame)
-    local dragging=false
-    local dragStart
-    local startPos
-    local moved=false
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,120,0,45)
+frame.Position = UDim2.new(1,-140,0,20)
+frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+frame.BackgroundTransparency = 0.35
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
 
-    Frame.InputBegan:Connect(function(input)
-        if input.UserInputType==Enum.UserInputType.MouseButton1
-        or input.UserInputType==Enum.UserInputType.Touch then
-            dragging=true
-            moved=false
-            dragStart=input.Position
-            startPos=Frame.Position
+local fpsLabel = Instance.new("TextLabel", frame)
+fpsLabel.Size = UDim2.new(1,0,0.5,0)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.Font = Enum.Font.SourceSansBold
+fpsLabel.TextSize = 18
 
-            input.Changed:Connect(function()
-                if input.UserInputState==Enum.UserInputState.End then
-                    dragging=false
-                end
-            end)
-        end
-    end)
+local pingLabel = Instance.new("TextLabel", frame)
+pingLabel.Position = UDim2.new(0,0,0.5,0)
+pingLabel.Size = UDim2.new(1,0,0.5,0)
+pingLabel.BackgroundTransparency = 1
+pingLabel.Font = Enum.Font.SourceSansBold
+pingLabel.TextSize = 18
 
-    UIS.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType==Enum.UserInputType.MouseMovement
-        or input.UserInputType==Enum.UserInputType.Touch) then
+--====================================================
+-- NÚT DELETE MAP (DRAG + NO CLICK WHEN DRAG)
+--====================================================
+local deleteBtn = Instance.new("TextButton", gui)
+deleteBtn.Size = UDim2.new(0,130,0,40)
+deleteBtn.Position = UDim2.new(0,20,0,200)
+deleteBtn.Text = "DELETE MAP"
+deleteBtn.Font = Enum.Font.SourceSansBold
+deleteBtn.TextSize = 18
+deleteBtn.BackgroundColor3 = Color3.fromRGB(200,60,60)
+deleteBtn.TextColor3 = Color3.new(1,1,1)
+deleteBtn.Active = true
+deleteBtn.Draggable = true
 
-            local delta=input.Position-dragStart
+local dragging = false
+deleteBtn.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+deleteBtn.InputChanged:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseMovement then
+		dragging = true
+	end
+end)
 
-            if math.abs(delta.X)>6 or math.abs(delta.Y)>6 then
-                moved=true
-            end
-
-            Frame.Position=UDim2.new(
-                startPos.X.Scale,startPos.X.Offset+delta.X,
-                startPos.Y.Scale,startPos.Y.Offset+delta.Y)
-        end
-    end)
-
-    return function() return moved end
+--====================================================
+-- ULTRA LOW GRAPHICS (AUTO KHI VÀO GAME)
+--====================================================
+local function ultraLow()
+	settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+	Lighting.GlobalShadows = false
+	Lighting.FogEnd = math.huge
+	Lighting.Brightness = 1
+	
+	for _,v in pairs(workspace:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.Material = Enum.Material.Plastic
+			v.CastShadow = false
+			v.Reflectance = 0
+		elseif v:IsA("Decal") or v:IsA("Texture") or v:IsA("ParticleEmitter") or v:IsA("Trail") then
+			v:Destroy()
+		end
+	end
 end
+ultraLow()
 
--------------------------------------------------
--- FPS FRAME (MỜ + AUTO SIZE)
--------------------------------------------------
-local frame=Instance.new("Frame",gui)
-frame.Position=UDim2.new(1,-150,0,10)
-frame.BackgroundColor3=Color3.fromRGB(0,0,0)
-frame.BackgroundTransparency=0.55
-frame.BorderSizePixel=2
-frame.AutomaticSize=Enum.AutomaticSize.XY
-dragify(frame)
-
-local padding=Instance.new("UIPadding",frame)
-padding.PaddingLeft=UDim.new(0,6)
-padding.PaddingRight=UDim.new(0,6)
-padding.PaddingTop=UDim.new(0,4)
-padding.PaddingBottom=UDim.new(0,4)
-
-local list=Instance.new("UIListLayout",frame)
-list.Padding=UDim.new(0,2)
-
-local fpsLabel=Instance.new("TextLabel",frame)
-fpsLabel.BackgroundTransparency=1
-fpsLabel.Font=Enum.Font.Code
-fpsLabel.TextSize=14
-fpsLabel.TextXAlignment=Enum.TextXAlignment.Left
-fpsLabel.AutomaticSize=Enum.AutomaticSize.XY
-fpsLabel.Text="FPS: 0 / 500"
-
-local pingLabel=Instance.new("TextLabel",frame)
-pingLabel.BackgroundTransparency=1
-pingLabel.Font=Enum.Font.Code
-pingLabel.TextSize=14
-pingLabel.TextXAlignment=Enum.TextXAlignment.Left
-pingLabel.AutomaticSize=Enum.AutomaticSize.XY
-pingLabel.Text="Ping: 0 ms"
-pingLabel.TextColor3=Color3.fromRGB(0,255,0)
-
--------------------------------------------------
--- BUTTON DELETE MAP
--------------------------------------------------
-local btn=Instance.new("TextButton",gui)
-btn.Size=UDim2.new(0,140,0,40)
-btn.Position=UDim2.new(0,10,0.75,0)
-btn.BackgroundColor3=Color3.fromRGB(20,20,20)
-btn.TextColor3=Color3.fromRGB(255,255,255)
-btn.Font=Enum.Font.Code
-btn.TextSize=15
-btn.Text="DELETE 80% MAP"
-local wasDragged=dragify(btn)
-
--------------------------------------------------
--- CONFIRM UI
--------------------------------------------------
-local confirmFrame=Instance.new("Frame",gui)
-confirmFrame.Size=UDim2.new(0,220,0,110)
-confirmFrame.Position=UDim2.new(0.5,-110,0.5,-55)
-confirmFrame.BackgroundColor3=Color3.fromRGB(0,0,0)
-confirmFrame.BackgroundTransparency=0.25
-confirmFrame.Visible=false
-confirmFrame.BorderSizePixel=2
-
-local title=Instance.new("TextLabel",confirmFrame)
-title.Size=UDim2.new(1,0,0.5,0)
-title.BackgroundTransparency=1
-title.Font=Enum.Font.Code
-title.TextSize=18
-title.TextColor3=Color3.fromRGB(255,255,255)
-title.Text="DELETE 80% MAP ?"
-
-local yesBtn=Instance.new("TextButton",confirmFrame)
-yesBtn.Size=UDim2.new(0.5,0,0.5,0)
-yesBtn.Position=UDim2.new(0,0,0.5,0)
-yesBtn.Text="YES"
-yesBtn.Font=Enum.Font.Code
-yesBtn.TextSize=16
-yesBtn.BackgroundColor3=Color3.fromRGB(0,170,0)
-yesBtn.TextColor3=Color3.fromRGB(255,255,255)
-
-local noBtn=Instance.new("TextButton",confirmFrame)
-noBtn.Size=UDim2.new(0.5,0,0.5,0)
-noBtn.Position=UDim2.new(0.5,0,0.5,0)
-noBtn.Text="NO"
-noBtn.Font=Enum.Font.Code
-noBtn.TextSize=16
-noBtn.BackgroundColor3=Color3.fromRGB(170,0,0)
-noBtn.TextColor3=Color3.fromRGB(255,255,255)
-
--------------------------------------------------
--- DELETE 80% MAP FUNCTION
--------------------------------------------------
+--====================================================
+-- XOÁ 50% MAP☃️
+--====================================================
 local function delete80Map()
-    local objects={}
-    for _,obj in pairs(workspace:GetDescendants()) do
-        if (obj:IsA("BasePart") or obj:IsA("Model"))
-        and not obj:IsDescendantOf(game.Players)
-        and obj.Name~="Terrain"
-        and obj.Name~="Camera" then
-            table.insert(objects,obj)
-        end
-    end
-
-    local total=#objects
-    local deleteCount=math.floor(total*0.5)
-
-    for i=total,2,-1 do
-        local j=math.random(i)
-        objects[i],objects[j]=objects[j],objects[i]
-    end
-
-    for i=1,deleteCount do
-        if objects[i] and objects[i].Parent then
-            objects[i]:Destroy()
-        end
-    end
-
-    btn.Text="DONE ✔"
+	local objs = workspace:GetDescendants()
+	for i = 1, math.floor(#objs * 0.5) do
+		local v = objs[i]
+		if v:IsA("Model") or v:IsA("BasePart") or v:IsA("MeshPart") then
+			pcall(function() v:Destroy() end)
+		end
+	end
 end
 
--------------------------------------------------
--- BUTTON EVENTS
--------------------------------------------------
-btn.MouseButton1Click:Connect(function()
-    if wasDragged() then return end
-    confirmFrame.Visible=true
+--====================================================
+-- RESTORE GRAPHICS
+--====================================================
+local function restoreGraphics()
+	settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+	Lighting.GlobalShadows = true
+	Lighting.Brightness = 2
+	Lighting.FogEnd = 100000
+end
+
+--====================================================
+-- NÚT DELETE ↔ RESTORE
+--====================================================
+local deleted = false
+
+deleteBtn.MouseButton1Click:Connect(function()
+	if dragging then return end
+	
+	if not deleted then
+		deleteBtn.Text = "Deleting..."
+		delete80Map()
+		wait(1)
+		deleteBtn.Text = "DONE (RESTORE)"
+		deleted = true
+	else
+		deleteBtn.Text = "Restoring..."
+		restoreGraphics()
+		wait(1)
+		deleteBtn.Text = "DELETE MAP"
+		deleted = false
+	end
 end)
 
-yesBtn.MouseButton1Click:Connect(function()
-    confirmFrame.Visible=false
-    delete80Map()
-end)
-
-noBtn.MouseButton1Click:Connect(function()
-    confirmFrame.Visible=false
-end)
-
--------------------------------------------------
+--====================================================
 -- FPS + PING COUNTER
--------------------------------------------------
-local frames=0
-local last=tick()
-local MAX_FPS=500
+--====================================================
+local last = tick()
+local frames = 0
 
 RunService.RenderStepped:Connect(function()
-    frames+=1
-    local now=tick()
+	frames += 1
+	if tick() - last >= 1 then
+		local fps = math.clamp(frames,0,500)
+		frames = 0
+		last = tick()
 
-    if now-last>=1 then
-        local fps=math.floor(frames/(now-last))
-        if fps>MAX_FPS then fps=MAX_FPS end
-        fpsLabel.Text="FPS: "..fps.." / "..MAX_FPS
+		-- FPS màu
+		if fps < 30 then
+			fpsLabel.TextColor3 = Color3.fromRGB(255,70,70)
+		else
+			fpsLabel.TextColor3 = Color3.fromRGB(0,255,0)
+		end
+		fpsLabel.Text = "FPS: "..fps
 
-        if fps<30 then
-            fpsLabel.TextColor3=Color3.fromRGB(255,0,0)
-        else
-            fpsLabel.TextColor3=Color3.fromRGB(0,255,0)
-        end
-
-        frames=0
-        last=now
-    end
-
-    local pingStat=Stats.Network.ServerStatsItem["Data Ping"]
-    if pingStat then
-        pingLabel.Text="Ping: "..math.floor(pingStat:GetValue()).." ms"
-    end
+		-- Ping màu
+		local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+		if ping < 100 then
+			pingLabel.TextColor3 = Color3.fromRGB(0,255,0)
+		elseif ping < 200 then
+			pingLabel.TextColor3 = Color3.fromRGB(255,200,0)
+		else
+			pingLabel.TextColor3 = Color3.fromRGB(255,70,70)
+		end
+		pingLabel.Text = "Ping: "..ping
+	end
 end)
-printf("By.Enel")
+printf("Enel☃️")
