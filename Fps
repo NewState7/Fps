@@ -154,7 +154,7 @@ local function delete80Map()
     end
 
     local total=#objects
-    local deleteCount=math.floor(total*0.8)
+    local deleteCount=math.floor(total*0.5)
 
     for i=total,2,-1 do
         local j=math.random(i)
