@@ -17,8 +17,8 @@ frame.Position = UDim2.new(1,-140,0,20)
 frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 frame.BackgroundTransparency = 0.35
 frame.BorderSizePixel = 0
-frame.Active = false
-frame.Draggable = false
+frame.Active = true
+frame.Draggable = true
 
 local fpsLabel = Instance.new("TextLabel", frame)
 fpsLabel.Size = UDim2.new(1,0,0.5,0)
@@ -44,8 +44,8 @@ deleteBtn.Font = Enum.Font.SourceSansBold
 deleteBtn.TextSize = 18
 deleteBtn.BackgroundColor3 = Color3.fromRGB(200,60,60)
 deleteBtn.TextColor3 = Color3.new(1,1,1)
-deleteBtn.Active = true
-deleteBtn.Draggable = true
+deleteBtn.Active = false
+deleteBtn.Draggable = false
 
 local dragging = false
 deleteBtn.InputBegan:Connect(function(i)
@@ -116,7 +116,7 @@ deleteBtn.MouseButton1Click:Connect(function()
 		delete80Map()
 		wait(1)
 		deleteBtn.Text = "DONE (RESTORE)"
-		deleted = false
+		deleted = true
 	else
 		deleteBtn.Text = "Restoring..."
 		restoreGraphics()
